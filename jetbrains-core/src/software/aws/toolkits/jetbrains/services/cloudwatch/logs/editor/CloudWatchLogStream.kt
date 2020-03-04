@@ -74,12 +74,29 @@ class CloudWatchLogStream(
         // allow one column to be selected for copy paste
         logsTableView.autoResizeMode = JTable.AUTO_RESIZE_ALL_COLUMNS
         val logsScrollPane = ScrollPaneFactory.createScrollPane(logsTableView)
+        var ignoreNext = false
         logsScrollPane.verticalScrollBar.addAdjustmentListener {
-            if (logsScrollPane.verticalScrollBar.isAtBottom() && logsTableView.model.rowCount > 0) {
+            if (logsTableView.model.rowCount == 0) {
+                return@addAdjustmentListener
+            }
+            if (ignoreNext) {
+                ignoreNext = false
+                return@addAdjustmentListener
+            }
+            if (logsScrollPane.verticalScrollBar.isAtBottom()) {
                 logStreamClient.loadMoreForward {
                     if (it.isNotEmpty()) {
                         val events = logsTableView.tableViewModel.items.plus(it)
                         runInEdt { logsTableView.tableViewModel.items = events }
+                    }
+                }
+            } else if (logsScrollPane.verticalScrollBar.isAtTop()) {
+                logStreamClient.loadMoreBackward {
+                    if (it.isNotEmpty()) {
+                        val events = it.plus(logsTableView.tableViewModel.items)
+                        runInEdt {
+                            logsTableView.tableViewModel.items = events
+                        }
                     }
                 }
             }
@@ -89,11 +106,11 @@ class CloudWatchLogStream(
             logStreamClient.loadInitialAround(startTime, timeScale) {
                 runInEdt {
                     logsTableView.tableViewModel.items = it
-                    val max = logsScrollPane.verticalScrollBar.maximum
-                    // TODO remove
+                    ignoreNext = true
+                    // TODO remove this ridiculous hack
                     GlobalScope.launch {
                         delay(100)
-                        logsScrollPane.verticalScrollBar.value = max / 2
+                        logsScrollPane.verticalScrollBar.value = logsScrollPane.verticalScrollBar.maximum
                     }
                 }
             }
@@ -141,6 +158,7 @@ class CloudWatchLogStream(
 
     override fun dispose() {}
 
-    private fun JScrollBar.isAtBottom(): Boolean = value == maximum - visibleAmount
+    private fun JScrollBar.isAtBottom(): Boolean = value == (maximum - visibleAmount)
+    private fun JScrollBar.isAtTop(): Boolean = value == minimum
 }
 

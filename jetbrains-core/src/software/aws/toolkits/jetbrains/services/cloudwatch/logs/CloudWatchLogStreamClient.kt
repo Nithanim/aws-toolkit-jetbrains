@@ -23,47 +23,66 @@ class CloudWatchLogStreamClient(
     private var nextBackwardToken: String? = null
     private var nextForwardToken: String? = null
 
-    private fun loadInitial(request: GetLogEventsRequest, callback: ((List<OutputLogEvent>) -> Unit)) {
-        launch {
-            val response = client.getLogEvents(request)
-            val events = response.events().filterNotNull()
+    private fun load(
+        request: GetLogEventsRequest,
+        saveForwardToken: Boolean,
+        saveBackwardToken: Boolean,
+        callback: ((List<OutputLogEvent>) -> Unit)
+    ) = launch {
+        val response = client.getLogEvents(request)
+        val events = response.events().filterNotNull()
+        if (saveForwardToken) {
             nextForwardToken = response.nextForwardToken()
-            nextBackwardToken = response.nextBackwardToken()
-            callback(events)
         }
+        if (saveBackwardToken) {
+            nextBackwardToken = response.nextBackwardToken()
+        }
+        callback(events)
     }
 
     fun loadInitialAround(startTime: Long, timeScale: Long, callback: ((List<OutputLogEvent>) -> Unit)) {
-        loadInitial(
-            GetLogEventsRequest
-                .builder()
-                .logGroupName(logGroup)
-                .logStreamName(logStream)
-                .startTime(startTime - timeScale)
-                .endTime(startTime + timeScale).build(),
-            callback
-        )
+        val request = GetLogEventsRequest
+            .builder()
+            .logGroupName(logGroup)
+            .logStreamName(logStream)
+            .startTime(startTime - timeScale)
+            .endTime(startTime + timeScale)
+            .build()
+        load(request, saveForwardToken = true, saveBackwardToken = true, callback = callback)
     }
 
     fun loadInitial(fromHead: Boolean, callback: ((List<OutputLogEvent>) -> Unit)) {
-        loadInitial(GetLogEventsRequest.builder().logGroupName(logGroup).logStreamName(logStream).startFromHead(fromHead).build(), callback)
-    }
-
-    // TODO implement
-    fun loadMoreForward(callback: (List<OutputLogEvent>) -> Unit) {
-        if (coroutineContext[Job]?.children?.firstOrNull() == null) {
-            launch {
-                streamMore(callback)
-            }
+        launch {
+            val request = GetLogEventsRequest.builder().logGroupName(logGroup).logStreamName(logStream).startFromHead(fromHead).build()
+            load(request, saveForwardToken = true, saveBackwardToken = true, callback = callback)
         }
     }
 
-    // TODO implement
+    // TODO fix this coroutineContext hack
+    fun loadMoreForward(callback: (List<OutputLogEvent>) -> Unit) {
+        if (coroutineContext[Job]?.children?.firstOrNull() == null) {
+            val request = GetLogEventsRequest
+                .builder()
+                .logGroupName(logGroup)
+                .logStreamName(logStream)
+                .startFromHead(true)
+                .nextToken(nextForwardToken)
+                .build()
+            load(request, saveForwardToken = true, saveBackwardToken = false, callback = callback)
+        }
+    }
+
+    // TODO fix this coroutineContext hack
     fun loadMoreBackward(callback: (List<OutputLogEvent>) -> Unit) {
         if (coroutineContext[Job]?.children?.firstOrNull() == null) {
-            launch {
-                streamMore(callback)
-            }
+            val request = GetLogEventsRequest
+                .builder()
+                .logGroupName(logGroup)
+                .logStreamName(logStream)
+                .startFromHead(true)
+                .nextToken(nextBackwardToken)
+                .build()
+            load(request, saveForwardToken = false, saveBackwardToken = true, callback = callback)
         }
     }
 
@@ -71,7 +90,7 @@ class CloudWatchLogStreamClient(
         if (coroutineContext[Job]?.children?.firstOrNull() == null) {
             launch {
                 while (true) {
-                    streamMore(callback)
+                    loadMoreForward(callback)
                     delay(1000L)
                 }
             }
@@ -82,22 +101,6 @@ class CloudWatchLogStreamClient(
         if (coroutineContext[Job]?.children?.firstOrNull() != null) {
             coroutineContext[Job]?.cancelChildren()
         }
-    }
-
-    private fun streamMore(callback: ((List<OutputLogEvent>) -> Unit)) {
-        val response = client.getLogEvents {
-            it
-                .logGroupName(logGroup)
-                .logStreamName(logStream)
-                // required by nextToken
-                .startFromHead(true)
-                .nextToken(nextForwardToken)
-                .build()
-        }
-        val newEvents = response.events().filterNotNull()
-        // Streaming is a forward event
-        nextForwardToken = response.nextForwardToken()
-        callback(newEvents)
     }
 
     override fun dispose() {
