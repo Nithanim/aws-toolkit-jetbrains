@@ -7,7 +7,7 @@ import com.intellij.openapi.project.Project
 import icons.AwsIcons
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import software.amazon.awssdk.services.cloudformation.CloudFormationClient
+import software.amazon.awssdk.services.cloudwatchlogs.CloudWatchLogsClient
 import software.amazon.awssdk.services.cloudwatchlogs.model.LogGroup
 import software.aws.toolkits.jetbrains.core.explorer.nodes.AwsExplorerNode
 import software.aws.toolkits.jetbrains.core.explorer.nodes.AwsExplorerResourceNode
@@ -26,10 +26,10 @@ class CloudWatchLogsServiceNode(project: Project, service: AwsExplorerServiceNod
 class CloudWatchLogsNode(
     project: Project,
     val arn: String,
-    val logGroupName: String
+    private val logGroupName: String
 ) : AwsExplorerResourceNode<String>(
     project,
-    CloudFormationClient.SERVICE_NAME,
+    CloudWatchLogsClient.SERVICE_NAME,
     logGroupName,
     // TODO get icon for CloudWatch
     AwsIcons.Resources.CLOUDFORMATION_STACK

@@ -284,9 +284,9 @@
                     class="software.aws.toolkits.jetbrains.services.cloudformation.actions.DeleteStackAction"/>
         </group>
 
-        <group id="aws.toolkit.explorer.cloudwatchlogs" popup="false" compact="false">
+        <group id="aws.toolkit.explorer.logs.group" popup="true" compact="false">
             <action id="cloudwatch.logs.open"
-                    class="software.aws.toolkits.jetbrains.services.cloudwatch.logs.actions.OpenWindow"/>
+                    class="software.aws.toolkits.jetbrains.services.cloudwatch.logs.actions.OpenLogGroups"/>
         </group>
 
         <group id="aws.toolkit.explorer.s3" popup="false" compact="false">
