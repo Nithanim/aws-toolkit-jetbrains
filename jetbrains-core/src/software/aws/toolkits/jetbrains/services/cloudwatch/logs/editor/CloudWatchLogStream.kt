@@ -15,6 +15,9 @@ import com.intellij.ui.ScrollPaneFactory
 import com.intellij.ui.table.TableView
 import com.intellij.util.ui.ColumnInfo
 import com.intellij.util.ui.ListTableModel
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import software.amazon.awssdk.services.cloudwatchlogs.CloudWatchLogsClient
 import software.amazon.awssdk.services.cloudwatchlogs.model.OutputLogEvent
 import software.aws.toolkits.jetbrains.services.cloudwatch.logs.CloudWatchLogStreamClient
@@ -83,7 +86,17 @@ class CloudWatchLogStream(
         }
         logsPanel.add(logsScrollPane)
         if (startTime != null && timeScale != null) {
-            logStreamClient.loadInitialAround(startTime, timeScale) { runInEdt { logsTableView.tableViewModel.items = it } }
+            logStreamClient.loadInitialAround(startTime, timeScale) {
+                runInEdt {
+                    logsTableView.tableViewModel.items = it
+                    val max = logsScrollPane.verticalScrollBar.maximum
+                    // TODO remove
+                    GlobalScope.launch {
+                        delay(100)
+                        logsScrollPane.verticalScrollBar.value = max / 2
+                    }
+                }
+            }
         } else {
             logStreamClient.loadInitial(fromHead) { runInEdt { logsTableView.tableViewModel.items = it } }
         }
