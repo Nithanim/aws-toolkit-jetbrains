@@ -9,15 +9,15 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import software.amazon.awssdk.services.cloudformation.CloudFormationClient
 import software.amazon.awssdk.services.cloudwatchlogs.model.LogGroup
-import software.aws.toolkits.jetbrains.core.explorer.AwsExplorerService
 import software.aws.toolkits.jetbrains.core.explorer.nodes.AwsExplorerNode
 import software.aws.toolkits.jetbrains.core.explorer.nodes.AwsExplorerResourceNode
+import software.aws.toolkits.jetbrains.core.explorer.nodes.AwsExplorerServiceNode
 import software.aws.toolkits.jetbrains.core.explorer.nodes.CacheBackedAwsExplorerServiceRootNode
 import software.aws.toolkits.jetbrains.services.cloudwatch.logs.resources.CloudWatchResources
 
-class CloudWatchLogsServiceNode(project: Project) : CacheBackedAwsExplorerServiceRootNode<LogGroup>(
+class CloudWatchLogsServiceNode(project: Project, service: AwsExplorerServiceNode) : CacheBackedAwsExplorerServiceRootNode<LogGroup>(
     project,
-    AwsExplorerService.CLOUDWATCH,
+    service,
     CloudWatchResources.LIST_LOG_GROUPS
 ) {
     override fun toNode(child: LogGroup): AwsExplorerNode<*> = CloudWatchLogsNode(nodeProject, child.arn(), child.logGroupName())
@@ -31,9 +31,10 @@ class CloudWatchLogsNode(
     project,
     CloudFormationClient.SERVICE_NAME,
     logGroupName,
+    // TODO get icon for CloudWatch
     AwsIcons.Resources.CLOUDFORMATION_STACK
 ) {
-    override fun resourceType() = "stream"
+    override fun resourceType() = "group"
 
     override fun resourceArn() = arn
 
