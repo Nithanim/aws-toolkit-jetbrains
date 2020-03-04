@@ -64,7 +64,7 @@ class CloudWatchLogStream(
             override fun getRenderer(item: OutputLogEvent?): TableCellRenderer? = WrapCellRenderer
         })
     private var logsTableView: TableView<OutputLogEvent> = TableView<OutputLogEvent>(defaultModel)
-    private val logStreamClient = CloudWatchLogStreamClient(client, logGroup, logStream, fromHead)
+    private val logStreamClient = CloudWatchLogStreamClient(client, logGroup, logStream)
 
     init {
         Disposer.register(this, logStreamClient)
@@ -73,14 +73,19 @@ class CloudWatchLogStream(
         val logsScrollPane = ScrollPaneFactory.createScrollPane(logsTableView)
         logsScrollPane.verticalScrollBar.addAdjustmentListener {
             if (logsScrollPane.verticalScrollBar.isAtBottom() && logsTableView.model.rowCount > 0) {
-                logStreamClient.loadMore { runInEdt { logsTableView.tableViewModel.items = it } }
+                logStreamClient.loadMoreForward {
+                    if (it.isNotEmpty()) {
+                        val events = logsTableView.tableViewModel.items.plus(it)
+                        runInEdt { logsTableView.tableViewModel.items = events }
+                    }
+                }
             }
         }
         logsPanel.add(logsScrollPane)
         if (startTime != null && timeScale != null) {
             logStreamClient.loadInitialAround(startTime, timeScale) { runInEdt { logsTableView.tableViewModel.items = it } }
         } else {
-            logStreamClient.loadInitial { runInEdt { logsTableView.tableViewModel.items = it } }
+            logStreamClient.loadInitial(fromHead) { runInEdt { logsTableView.tableViewModel.items = it } }
         }
         setUpTemporaryButtons()
         addActions()
@@ -99,8 +104,10 @@ class CloudWatchLogStream(
             //remove load more
             // launch thing
             logStreamClient.startStreaming {
-                val events = logsTableView.tableViewModel.items.plus(it)
-                runInEdt { logsTableView.tableViewModel.items = events }
+                if (it.isNotEmpty()) {
+                    val events = logsTableView.tableViewModel.items.plus(it)
+                    runInEdt { logsTableView.tableViewModel.items = events }
+                }
             }
         }
         streamLogsOff.addActionListener {

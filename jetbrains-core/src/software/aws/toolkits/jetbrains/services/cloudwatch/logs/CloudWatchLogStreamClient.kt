@@ -18,24 +18,23 @@ import software.amazon.awssdk.services.cloudwatchlogs.model.OutputLogEvent
 class CloudWatchLogStreamClient(
     private val client: CloudWatchLogsClient,
     private val logGroup: String,
-    private val logStream: String,
-    private val fromHead: Boolean
+    private val logStream: String
 ) : CoroutineScope by CoroutineScope(CoroutineName("CloudWatchLogsStream")), Disposable {
-    private var firstLogTimestamp = 0L
-    private var lastLogTimestamp = 0L
+    private var nextBackwardToken: String? = null
+    private var nextForwardToken: String? = null
 
-    private fun logRequest(request: GetLogEventsRequest, callback: ((List<OutputLogEvent>) -> Unit)) {
+    private fun loadInitial(request: GetLogEventsRequest, callback: ((List<OutputLogEvent>) -> Unit)) {
         launch {
-            val events = client.getLogEvents(request).events()
-            if (events.isNotEmpty()) {
-                lastLogTimestamp = events.last().timestamp()
-                callback(events)
-            }
+            val response = client.getLogEvents(request)
+            val events = response.events().filterNotNull()
+            nextForwardToken = response.nextForwardToken()
+            nextBackwardToken = response.nextBackwardToken()
+            callback(events)
         }
     }
 
     fun loadInitialAround(startTime: Long, timeScale: Long, callback: ((List<OutputLogEvent>) -> Unit)) {
-        logRequest(
+        loadInitial(
             GetLogEventsRequest
                 .builder()
                 .logGroupName(logGroup)
@@ -46,27 +45,27 @@ class CloudWatchLogStreamClient(
         )
     }
 
-    fun loadInitial(callback: ((List<OutputLogEvent>) -> Unit)) {
-        logRequest(GetLogEventsRequest.builder().logGroupName(logGroup).logStreamName(logStream).startFromHead(fromHead).build(), callback)
+    fun loadInitial(fromHead: Boolean, callback: ((List<OutputLogEvent>) -> Unit)) {
+        loadInitial(GetLogEventsRequest.builder().logGroupName(logGroup).logStreamName(logStream).startFromHead(fromHead).build(), callback)
     }
 
     // TODO implement
-    fun loadMore(callback: (List<OutputLogEvent>) -> Unit) {
+    fun loadMoreForward(callback: (List<OutputLogEvent>) -> Unit) {
         if (coroutineContext[Job]?.children?.firstOrNull() == null) {
             launch {
                 streamMore(callback)
             }
         }
     }
-    /*
-    launch {
-        val events = listOf<OutputLogEvent>()
-        if (events.isNotEmpty()) {
-            lastLogTimestamp = events.last().timestamp()
-            callback(events)
+
+    // TODO implement
+    fun loadMoreBackward(callback: (List<OutputLogEvent>) -> Unit) {
+        if (coroutineContext[Job]?.children?.firstOrNull() == null) {
+            launch {
+                streamMore(callback)
+            }
         }
     }
-}*/
 
     fun startStreaming(callback: ((List<OutputLogEvent>) -> Unit)) {
         if (coroutineContext[Job]?.children?.firstOrNull() == null) {
@@ -86,16 +85,19 @@ class CloudWatchLogStreamClient(
     }
 
     private fun streamMore(callback: ((List<OutputLogEvent>) -> Unit)) {
-        // Add 1 millisecond to query more events
-        val queryTimestamp = lastLogTimestamp + 1
-        val newEvents = client
-            .getLogEvents { it.logGroupName(logGroup).logStreamName(logStream).startTime(queryTimestamp).build() }
-            .events()
-            .filterNotNull()
-        if (newEvents.isNotEmpty()) {
-            lastLogTimestamp = newEvents.last().timestamp()
-            callback(newEvents)
+        val response = client.getLogEvents {
+            it
+                .logGroupName(logGroup)
+                .logStreamName(logStream)
+                // required by nextToken
+                .startFromHead(true)
+                .nextToken(nextForwardToken)
+                .build()
         }
+        val newEvents = response.events().filterNotNull()
+        // Streaming is a forward event
+        nextForwardToken = response.nextForwardToken()
+        callback(newEvents)
     }
 
     override fun dispose() {
