@@ -70,8 +70,8 @@ class CloudWatchLogStream(
     private val logStreamClient = CloudWatchLogStreamClient(client, logGroup, logStream)
 
     init {
+        // dispose logStreamClient when this is disposed
         Disposer.register(this, logStreamClient)
-        // allow one column to be selected for copy paste
         logsTableView.autoResizeMode = JTable.AUTO_RESIZE_ALL_COLUMNS
         val logsScrollPane = ScrollPaneFactory.createScrollPane(logsTableView)
         var ignoreNext = false
