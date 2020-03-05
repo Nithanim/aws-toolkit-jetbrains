@@ -100,7 +100,7 @@ class CloudWatchLogGroup(private val project: Project, private val logGroup: Str
             val row = tableView.rowAtPoint(e.point).takeIf { it >= 0 } ?: return
             val window = CloudWatchLogWindow.getInstance(project)
             GlobalScope.launch {
-                window.showLog(logGroup, tableView.getRow(row).logStreamName())
+                window.showLogStream(logGroup, tableView.getRow(row).logStreamName())
             }
         }
     }

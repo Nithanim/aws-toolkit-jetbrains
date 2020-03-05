@@ -6,8 +6,6 @@ package software.aws.toolkits.jetbrains.services.cloudwatch.logs
 import com.intellij.openapi.application.runInEdt
 import com.intellij.openapi.components.ServiceManager
 import com.intellij.openapi.project.Project
-import software.amazon.awssdk.services.cloudwatchlogs.CloudWatchLogsClient
-import software.aws.toolkits.jetbrains.core.awsClient
 import software.aws.toolkits.jetbrains.core.toolwindow.ToolkitToolWindowManager
 import software.aws.toolkits.jetbrains.core.toolwindow.ToolkitToolWindowType
 import software.aws.toolkits.jetbrains.services.cloudwatch.logs.editor.CloudWatchLogGroup
@@ -32,34 +30,31 @@ class CloudWatchLogWindow(private val project: Project) {
     }
 
     fun showLogStream(logGroup: String, logStream: String, fromHead: Boolean = true, title: String? = null) {
-        val client = project.awsClient<CloudWatchLogsClient>()
-        //val console = TextConsoleBuilderFactory.getInstance().createBuilder(project).apply { setViewer(true) }.console
         val id = "$logGroup/$logStream"
         val displayName = title ?: id
-        // dispose existing window if it exists to update. TODO fix this massive hack
+        // dispose existing window if it exists to update. TODO add a refresh, duh
         val existingWindow = toolWindow.find(id)
         if (existingWindow != null) {
             runInEdt {
                 existingWindow.dispose()
             }
         }
-        val group = CloudWatchLogStream(client, logGroup, logStream, fromHead)
+        val group = CloudWatchLogStream(project, logGroup, logStream, fromHead)
         runInEdt {
             toolWindow.addTab(displayName, group.content, activate = true, id = id, disposer = group)
         }
     }
 
     fun showLogStreamAround(logGroup: String, logStream: String, startTime: Long, timeScale: Long) {
-        val client = project.awsClient<CloudWatchLogsClient>()
         val id = "$logGroup/$logStream $startTime$timeScale"
-        // dispose existing window if it exists to update. TODO fix this massive hack
+        // dispose existing window if it exists to update. TODO collapse this and above also fix
         val existingWindow = toolWindow.find(id)
         if (existingWindow != null) {
             runInEdt {
                 existingWindow.dispose()
             }
         }
-        val group = CloudWatchLogStream(client, logGroup, logStream, false, startTime, timeScale)
+        val group = CloudWatchLogStream(project, logGroup, logStream, false, startTime, timeScale)
         runInEdt {
             toolWindow.addTab(id, group.content, activate = true, id = id, disposer = group)
         }

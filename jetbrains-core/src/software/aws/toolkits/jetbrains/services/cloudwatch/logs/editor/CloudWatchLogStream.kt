@@ -8,10 +8,12 @@ import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionPlaces
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.application.runInEdt
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.SimpleToolWindowPanel
 import com.intellij.openapi.util.Disposer
 import com.intellij.ui.PopupHandler
 import com.intellij.ui.ScrollPaneFactory
+import com.intellij.ui.components.JBLoadingPanel
 import com.intellij.ui.table.TableView
 import com.intellij.util.ui.ColumnInfo
 import com.intellij.util.ui.ListTableModel
@@ -20,9 +22,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import software.amazon.awssdk.services.cloudwatchlogs.CloudWatchLogsClient
 import software.amazon.awssdk.services.cloudwatchlogs.model.OutputLogEvent
+import software.aws.toolkits.jetbrains.core.awsClient
 import software.aws.toolkits.jetbrains.services.cloudwatch.logs.CloudWatchLogStreamClient
 import software.aws.toolkits.jetbrains.services.cloudwatch.logs.actions.ShowLogsAround
 import software.aws.toolkits.resources.message
+import java.awt.BorderLayout
 import java.time.Instant
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
@@ -35,15 +39,16 @@ import javax.swing.JTextField
 import javax.swing.table.TableCellRenderer
 
 class CloudWatchLogStream(
-    client: CloudWatchLogsClient,
+    private val project: Project,
     private val logGroup: String,
     private val logStream: String,
     fromHead: Boolean,
     startTime: Long? = null,
     timeScale: Long? = null
 ) : SimpleToolWindowPanel(false, false), Disposable {
+    val client: CloudWatchLogsClient = project.awsClient()
     lateinit var content: JPanel
-    lateinit var logsPanel: JPanel
+    lateinit var logsPanel: JBLoadingPanel
     lateinit var searchLabel: JLabel
     lateinit var searchField: JTextField
     lateinit var showAsButton: JButton
@@ -69,18 +74,17 @@ class CloudWatchLogStream(
     private var logsTableView: TableView<OutputLogEvent> = TableView<OutputLogEvent>(defaultModel)
     private val logStreamClient = CloudWatchLogStreamClient(client, logGroup, logStream)
 
+    private fun createUIComponents() {
+        logsPanel = JBLoadingPanel(BorderLayout(), project)
+    }
+
     init {
         // dispose logStreamClient when this is disposed
         Disposer.register(this, logStreamClient)
         logsTableView.autoResizeMode = JTable.AUTO_RESIZE_ALL_COLUMNS
         val logsScrollPane = ScrollPaneFactory.createScrollPane(logsTableView)
-        var ignoreNext = false
         logsScrollPane.verticalScrollBar.addAdjustmentListener {
             if (logsTableView.model.rowCount == 0) {
-                return@addAdjustmentListener
-            }
-            if (ignoreNext) {
-                ignoreNext = false
                 return@addAdjustmentListener
             }
             if (logsScrollPane.verticalScrollBar.isAtBottom()) {
@@ -102,11 +106,12 @@ class CloudWatchLogStream(
             }
         }
         logsPanel.add(logsScrollPane)
+        logsPanel.startLoading()
         if (startTime != null && timeScale != null) {
             logStreamClient.loadInitialAround(startTime, timeScale) {
                 runInEdt {
                     logsTableView.tableViewModel.items = it
-                    ignoreNext = true
+                    logsPanel.stopLoading()
                     // TODO remove this ridiculous hack
                     GlobalScope.launch {
                         delay(100)
@@ -115,7 +120,12 @@ class CloudWatchLogStream(
                 }
             }
         } else {
-            logStreamClient.loadInitial(fromHead) { runInEdt { logsTableView.tableViewModel.items = it } }
+            logStreamClient.loadInitial(fromHead) {
+                runInEdt {
+                    logsTableView.tableViewModel.items = it
+                    logsPanel.stopLoading()
+                }
+            }
         }
         setUpTemporaryButtons()
         addActions()
