@@ -25,10 +25,9 @@ class CloudWatchLogWindow(private val project: Project) {
             }
             return
         }
-        val client = project.awsClient<CloudWatchLogsClient>()
-        val groups = CloudWatchLogGroup(project, client, logGroup)
+        val group = CloudWatchLogGroup(project, logGroup)
         runInEdt {
-            toolWindow.addTab(title = groups.title, component = groups.content, activate = true, id = logGroup)
+            toolWindow.addTab(title = group.title, component = group.content, activate = true, id = logGroup)
         }
     }
 
@@ -67,7 +66,7 @@ class CloudWatchLogWindow(private val project: Project) {
     }
 
     companion object {
-        private val CW_LOGS_TOOL_WINDOW = ToolkitToolWindowType("AWS.CloudWatchLog", message("cloudwatch.log.toolwindow"))
+        private val CW_LOGS_TOOL_WINDOW = ToolkitToolWindowType("AWS.CloudWatchLog", message("cloudwatch.logs.toolwindow"))
         fun getInstance(project: Project) = ServiceManager.getService(project, CloudWatchLogWindow::class.java)
     }
 }
