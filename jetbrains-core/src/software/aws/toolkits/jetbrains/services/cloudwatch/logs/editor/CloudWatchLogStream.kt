@@ -112,11 +112,6 @@ class CloudWatchLogStream(
                 runInEdt {
                     logsTableView.tableViewModel.items = it
                     logsPanel.stopLoading()
-                    // TODO remove this ridiculous hack
-                    GlobalScope.launch {
-                        delay(100)
-                        logsScrollPane.verticalScrollBar.value = logsScrollPane.verticalScrollBar.maximum
-                    }
                 }
             }
         } else {
