@@ -25,7 +25,7 @@ class CloudWatchLogWindow(private val project: Project) {
         }
         val group = CloudWatchLogGroup(project, logGroup)
         runInEdt {
-            toolWindow.addTab(title = group.title, component = group.content, activate = true, id = logGroup)
+            toolWindow.addTab(title = group.title, component = group.content, activate = true, id = logGroup, disposable = group)
         }
     }
 
@@ -41,7 +41,7 @@ class CloudWatchLogWindow(private val project: Project) {
         }
         val group = CloudWatchLogStream(project, logGroup, logStream, fromHead)
         runInEdt {
-            toolWindow.addTab(displayName, group.content, activate = true, id = id, disposer = group)
+            toolWindow.addTab(displayName, group.content, activate = true, id = id, disposable = group)
         }
     }
 
@@ -56,7 +56,7 @@ class CloudWatchLogWindow(private val project: Project) {
         }
         val group = CloudWatchLogStream(project, logGroup, logStream, false, startTime, timeScale)
         runInEdt {
-            toolWindow.addTab(id, group.content, activate = true, id = id, disposer = group)
+            toolWindow.addTab(id, group.content, activate = true, id = id, disposable = group)
         }
     }
 

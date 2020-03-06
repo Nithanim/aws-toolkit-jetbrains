@@ -4,17 +4,12 @@
 package software.aws.toolkits.jetbrains.services.cloudwatch.logs.editor
 
 import com.intellij.ui.components.JBTextArea
+import com.intellij.util.text.DateFormatUtil
 import com.intellij.util.ui.ColumnInfo
 import com.intellij.util.ui.ListTableModel
 import software.amazon.awssdk.services.cloudwatchlogs.model.LogStream
 import software.aws.toolkits.resources.message
 import java.awt.Component
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.time.format.DateTimeFormatter.ISO_LOCAL_DATE
-import java.time.format.DateTimeFormatter.ISO_LOCAL_TIME
-import java.time.format.DateTimeFormatterBuilder
 import javax.swing.JTable
 import javax.swing.SortOrder
 import javax.swing.table.TableCellRenderer
@@ -26,8 +21,10 @@ class CloudWatchLogsStreamsColumn : ColumnInfo<LogStream, String>(message("cloud
 
 class CloudWatchLogsStreamsColumnDate : ColumnInfo<LogStream, String>(message("cloudwatch.logs.last_event_time")) {
     override fun valueOf(item: LogStream?): String? {
-        item ?: return null
-        return dateFormatter.format(Instant.ofEpochMilli(item.lastEventTimestamp()).atZone(ZoneId.systemDefault()))
+        val timestamp = item?.lastEventTimestamp() ?: return null
+        val date = DateFormatUtil.getDateFormat().format(timestamp)
+        val time = DateFormatUtil.getTimeFormat().format(timestamp)
+        return "$date $time"
     }
 }
 
@@ -62,9 +59,3 @@ object WrapCellRenderer : JBTextArea(), TableCellRenderer {
     }
 }
 
-private val dateFormatter: DateTimeFormatter = DateTimeFormatterBuilder()
-    .parseCaseInsensitive()
-    .append(ISO_LOCAL_DATE)
-    .appendLiteral(' ')
-    .append(ISO_LOCAL_TIME)
-    .toFormatter()
