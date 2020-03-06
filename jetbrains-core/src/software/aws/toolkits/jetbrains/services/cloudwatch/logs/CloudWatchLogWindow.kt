@@ -29,7 +29,14 @@ class CloudWatchLogWindow(private val project: Project) {
         }
     }
 
-    fun showLogStream(logGroup: String, logStream: String, fromHead: Boolean = true, title: String? = null) {
+    fun showLogStream(
+        logGroup: String,
+        logStream: String,
+        fromHead: Boolean = true,
+        title: String? = null,
+        startTime: Long? = null,
+        timeScale: Long? = null
+    ) {
         val id = "$logGroup/$logStream"
         val displayName = title ?: id
         // dispose existing window if it exists to update. TODO add a refresh, duh
@@ -39,24 +46,9 @@ class CloudWatchLogWindow(private val project: Project) {
                 existingWindow.dispose()
             }
         }
-        val group = CloudWatchLogStream(project, logGroup, logStream, fromHead)
+        val group = CloudWatchLogStream(project, logGroup, logStream, fromHead, startTime, timeScale)
         runInEdt {
             toolWindow.addTab(displayName, group.content, activate = true, id = id, disposable = group)
-        }
-    }
-
-    fun showLogStreamAround(logGroup: String, logStream: String, startTime: Long, timeScale: Long) {
-        val id = "$logGroup/$logStream $startTime$timeScale"
-        // dispose existing window if it exists to update. TODO collapse this and above also fix
-        val existingWindow = toolWindow.find(id)
-        if (existingWindow != null) {
-            runInEdt {
-                existingWindow.dispose()
-            }
-        }
-        val group = CloudWatchLogStream(project, logGroup, logStream, false, startTime, timeScale)
-        runInEdt {
-            toolWindow.addTab(id, group.content, activate = true, id = id, disposable = group)
         }
     }
 

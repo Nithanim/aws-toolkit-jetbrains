@@ -12,12 +12,17 @@ import com.intellij.ui.table.TableView
 import software.amazon.awssdk.services.cloudwatchlogs.model.OutputLogEvent
 import software.aws.toolkits.jetbrains.services.cloudwatch.logs.CloudWatchLogWindow
 
-class ShowLogsAround(private val logGroup: String, private val logStream: String, private val treeTable: TableView<OutputLogEvent>) : AnAction("Show logs around <LOCALIZE THIS>", "abc <localize this>", AllIcons.Ide.Link), DumbAware {
+class ShowLogsAround(
+    private val logGroup: String,
+    private val logStream: String,
+    private val treeTable: TableView<OutputLogEvent>
+) :
+    AnAction("Show logs around <LOCALIZE THIS>", "abc <localize this>", AllIcons.Ide.Link), DumbAware {
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.getRequiredData(LangDataKeys.PROJECT)
         val window = CloudWatchLogWindow.getInstance(project)
         val selectedObject = treeTable.selectedObject ?: return
         // 1 minute for now
-        window.showLogStreamAround(logGroup, logStream, selectedObject.timestamp(), 60*1000)
+        window.showLogStream(logGroup, logStream, true, null, selectedObject.timestamp(), 60 * 1000)
     }
 }
