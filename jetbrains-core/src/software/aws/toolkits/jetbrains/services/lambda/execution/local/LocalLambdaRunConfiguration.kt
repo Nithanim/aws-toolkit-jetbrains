@@ -113,19 +113,26 @@ class LocalLambdaRunConfiguration(project: Project, factory: ConfigurationFactor
     override fun getState(executor: Executor, environment: ExecutionEnvironment): SamRunningState {
         try {
             val (handler, runtime, templateDetails) = resolveLambdaInfo(project = project, functionOptions = serializableOptions.functionOptions)
-            val psiElement = handlerPsiElement(handler, runtime)
+            val entryHandler = if (serializableOptions.functionOptions.quarkus == true) "io.quarkus.amazon.lambda.runtime.QuarkusStreamHandler::handleRequest" else handler
+
+            val handlerPsiElement = handlerPsiElement(handler, runtime)
                 ?: throw RuntimeConfigurationError(message("lambda.run_configuration.handler_not_found", handler))
+            val entryHandlerPsiElement = handlerPsiElement(entryHandler, runtime)
+                ?: throw RuntimeConfigurationError(message("lambda.run_configuration.handler_not_found", entryHandler))
+
 
             val samRunSettings = LocalLambdaRunSettings(
                 runtime,
                 handler,
+                entryHandler,
                 resolveInput(),
                 timeout(),
                 memorySize(),
                 environmentVariables(),
                 resolveCredentials(),
                 resolveRegion(),
-                psiElement,
+                handlerPsiElement,
+                entryHandlerPsiElement,
                 templateDetails,
                 serializableOptions.samOptions.copy(),
                 serializableOptions.debugHost
@@ -193,6 +200,12 @@ class LocalLambdaRunConfiguration(project: Project, factory: ConfigurationFactor
     fun logicalId() = serializableOptions.functionOptions.logicalId
 
     fun handler() = serializableOptions.functionOptions.handler
+
+    fun quarkus() = serializableOptions.functionOptions.quarkus
+
+    fun quarkus(enabled: Boolean) {
+        serializableOptions.functionOptions.quarkus = enabled
+    }
 
     fun runtime(): Runtime? = Runtime.fromValue(serializableOptions.functionOptions.runtime)?.validOrNull
 
@@ -327,6 +340,7 @@ class LocalLambdaRunConfiguration(project: Project, factory: ConfigurationFactor
 data class LocalLambdaRunSettings(
     val runtime: Runtime,
     val handler: String,
+    val entryHandler: String,
     val input: String,
     val timeout: Int,
     val memorySize: Int,
@@ -334,6 +348,7 @@ data class LocalLambdaRunSettings(
     val credentials: ToolkitCredentialsProvider,
     val region: AwsRegion,
     val handlerElement: NavigatablePsiElement,
+    val entryHandlerElement: NavigatablePsiElement,
     val templateDetails: SamTemplateDetails?,
     val samOptions: SamOptions,
     val debugHost: String

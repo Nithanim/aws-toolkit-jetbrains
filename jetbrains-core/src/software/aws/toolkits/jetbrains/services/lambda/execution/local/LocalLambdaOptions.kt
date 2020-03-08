@@ -28,6 +28,7 @@ class FunctionOptions {
     var logicalId: String? = null
     var runtime: String? = null
     var handler: String? = null
+    var quarkus: Boolean? = null
     var timeout: Int = DEFAULT_TIMEOUT
     var memorySize: Int = DEFAULT_MEMORY_SIZE
     var environmentVariables: Map<String, String> = linkedMapOf<String, String>()

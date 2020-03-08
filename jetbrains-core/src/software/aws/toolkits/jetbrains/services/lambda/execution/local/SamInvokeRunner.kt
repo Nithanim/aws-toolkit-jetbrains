@@ -89,8 +89,8 @@ class SamInvokeRunner : AsyncProgramRunner<RunnerSettings>() {
             )
         } else {
             BuildLambdaFromHandler(
-                lambdaSettings.handlerElement,
-                lambdaSettings.handler,
+                lambdaSettings.entryHandlerElement,
+                lambdaSettings.entryHandler,
                 lambdaSettings.runtime,
                 lambdaSettings.timeout,
                 lambdaSettings.memorySize,

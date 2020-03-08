@@ -55,6 +55,7 @@ public final class LocalLambdaRunSettingsEditorPanel {
     public SliderPanel timeoutSlider;
     public SliderPanel memorySlider;
     public JCheckBox invalidator;
+    public JCheckBox quarkus;
 
     private Runtime lastSelectedRuntime = null;
 
@@ -110,6 +111,7 @@ public final class LocalLambdaRunSettingsEditorPanel {
         templateFile.setEnabled(useTemplate.isSelected());
         timeoutSlider.setEnabled(!useTemplate.isSelected());
         memorySlider.setEnabled(!useTemplate.isSelected());
+        quarkus.setEnabled(!useTemplate.isSelected());
 
         if (useTemplate.isSelected()) {
             handler.setBackground(UIUtil.getComboBoxDisabledBackground());

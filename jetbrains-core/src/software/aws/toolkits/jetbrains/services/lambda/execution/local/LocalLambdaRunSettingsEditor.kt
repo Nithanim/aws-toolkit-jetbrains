@@ -47,6 +47,7 @@ class LocalLambdaRunSettingsEditor(project: Project) : SettingsEditor<LocalLambd
             view.setTemplateFile(null) // Also clears the functions selector
             view.runtime.model.selectedItem = configuration.runtime()
             view.handlerPanel.handler.text = configuration.handler() ?: ""
+            view.quarkus.isSelected = configuration.quarkus() ?: false
         }
 
         view.timeoutSlider.value = configuration.timeout()
@@ -65,6 +66,7 @@ class LocalLambdaRunSettingsEditor(project: Project) : SettingsEditor<LocalLambd
             configuration.useTemplate(view.templateFile.text, view.function.selected()?.logicalName)
         } else {
             configuration.useHandler(view.runtime.selected(), view.handlerPanel.handler.text)
+            configuration.quarkus(view.quarkus.isSelected)
         }
 
         configuration.timeout(view.timeoutSlider.value)

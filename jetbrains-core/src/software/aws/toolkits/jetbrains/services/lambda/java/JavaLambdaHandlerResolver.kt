@@ -43,7 +43,7 @@ class JavaLambdaHandlerResolver : LambdaHandlerResolver {
                     val handlerMethod = classes.asSequence()
                         .map { it.findMethodsByName(methodName, true) }
                         .flatMap { it.asSequence() }
-                        .filter { it.body != null } // Filter out interfaces
+                        .filter { !isInterface(it) }
                         .pickMostSpecificHandler()
                     handlerMethod?.let {
                         arrayOf(it)
@@ -52,6 +52,8 @@ class JavaLambdaHandlerResolver : LambdaHandlerResolver {
             }
         }
     }
+
+    private fun isInterface(method: PsiMethod): Boolean = method.containingClass?.isInterface ?: false
 
     override fun determineHandler(element: PsiElement): String? =
         DumbService.getInstance(element.project).computeWithAlternativeResolveEnabled<String, Exception> {
